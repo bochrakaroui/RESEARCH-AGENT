@@ -1,0 +1,6 @@
+SEARCH_RESULTS   = 6
+PASSAGES_PER_PAGE = 4
+EMBEDDING_MODEL  = "sentence-transformers/all-MiniLM-L6-v2"
+TOP_PASSAGES     = 5
+SUMMARY_SENTENCES = 3
+TIMEOUT          = 8
