@@ -1,5 +1,5 @@
 # number of URLs to fetch from DuckDuckGo
-SEARCH_RESULTS    = 6
+SEARCH_RESULTS    = 3
 
 # number of passages to keep per URL
 PASSAGES_PER_PAGE = 4
@@ -16,3 +16,10 @@ SUMMARY_SENTENCES = 3
 
 # Seconds to wait before giving up on a slow URL
 TIMEOUT           = 8
+
+# Ollama settings
+OLLAMA_MODEL = "llama3.2"
+
+# ChromaDB settings
+CHROMA_PATH       = "./chroma_store"
+CHROMA_COLLECTION = "research"
