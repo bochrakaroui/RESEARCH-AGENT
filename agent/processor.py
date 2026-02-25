@@ -1,18 +1,18 @@
 import numpy as np
 from sentence_transformers import SentenceTransformer
-from config import PASSAGES_PER_PAGE, TOP_PASSAGES
+from config import CHUNK_OVERLAP,CHUNK_SIZE, PASSAGES_PER_PAGE, TOP_PASSAGES
 
-def chunk_passages(text, max_words=120):
-    """
-    Split a long string into non-overlapping word-window chunks.
-    Example: 500-word article → four 120-word passages + one 20-word tail.
-    """
+def chunk_passages(text, max_words=CHUNK_SIZE, overlap=CHUNK_OVERLAP):
     words = text.split()
     if not words:
         return []
-    # Step through the word list in max_words increments
-    return [" ".join(words[i : i + max_words])
-            for i in range(0, len(words), max_words)]
+    chunks = []
+    i = 0
+    while i < len(words):
+        chunk = words[i: i + max_words]
+        chunks.append(" ".join(chunk))
+        i += max_words - overlap   # step forward by less than chunk size
+    return chunks
 def cosine(a, b):
     """
     Compute cosine similarity between two numpy vectors.

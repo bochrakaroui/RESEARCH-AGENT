@@ -1,11 +1,10 @@
 import time
 from sentence_transformers import SentenceTransformer
-from config import EMBEDDING_MODEL, TOP_PASSAGES
+from config import EMBEDDING_MODEL, TOP_PASSAGES , RETRIEVAL_CANDIDATE
 from agent.searcher  import search_web, fetch_text
-from agent.processor import build_docs, chunk_passages, cosine
+from agent.processor import build_docs, chunk_passages, cosine , embed_and_rank
 from agent.generator import generate_answer
 from agent.store     import get_collection, is_indexed, add_passages, query_collection
-
 class ResearchAgent:
     def __init__(self):
         print(f"Loading embedding model: {EMBEDDING_MODEL}")
@@ -46,7 +45,8 @@ class ResearchAgent:
         print("Querying vector store...")
         query_emb    = self.embedder.encode([query], convert_to_numpy=True)[0]
         top_passages = query_collection(self.collection, query_emb,
-                                        n_results=TOP_PASSAGES)
+                                        n_results=RETRIEVAL_CANDIDATE)
+        top_passages = embed_and_rank(query, top_passages, self.embedder)[:TOP_PASSAGES]
 
         if not top_passages:
             return {"query": query, "passages": [], "answer": "Nothing found."}

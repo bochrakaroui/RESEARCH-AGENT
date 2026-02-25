@@ -26,13 +26,17 @@ def generate_answer(query, top_passages):
     """
     context = build_context(top_passages)
 
-    system_prompt = """You are a research assistant.
-You will be given a question and a set of numbered source passages retrieved from the web.
-Your job is to write a clear, fluent answer using ONLY the information in those passages.
-Cite sources using their number in brackets, like [1] or [2].
-Do not add any information that is not present in the passages.
-If the passages do not contain enough information to answer, say so clearly."""
+    system_prompt = """You are an expert research assistant. Your job is to answer questions accurately using only the provided source passages.
 
+Rules you must follow:
+- Base your answer ONLY on the passages provided. Never add outside knowledge.
+- Always cite your sources using [1], [2], etc. after each claim.
+- If multiple passages support the same point, cite all of them like [1][3].
+- Structure your answer with a direct response first, then supporting details.
+- If the passages contradict each other, mention both perspectives.
+- If the passages don't contain enough information, say exactly what is missing.
+- Keep your answer between 3 and 6 sentences unless the question requires more detail.
+"""
     user_prompt = f"""Question: {query}
 
 Retrieved passages:
