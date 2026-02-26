@@ -7,7 +7,7 @@ SEARCH_RESULTS    = 3
 PASSAGES_PER_PAGE = 4
 
 # The embedding model to use.
-EMBEDDING_MODEL = "sentence-transformers/all-mpnet-base-v2"
+EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
 # number of top-ranked passages to use for the summary
 TOP_PASSAGES      = 5

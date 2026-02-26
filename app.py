@@ -1,479 +1,309 @@
 import requests
 import streamlit as st
-from datetime import datetime
 
 API_URL = "http://localhost:8000"
 
 st.set_page_config(
     page_title="Research Agent",
     page_icon="◈",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="centered",
+    initial_sidebar_state="collapsed",
 )
 
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap');
 
-*, *::before, *::after { box-sizing: border-box; }
-
-html, body, [data-testid="stAppViewContainer"] {
-    background: #0f0f13 !important;
-    font-family: 'Inter', sans-serif;
-    color: #e2e2e8;
+html, body, [class*="css"] {
+    font-family: 'DM Sans', sans-serif;
+    background: linear-gradient(160deg, #0d0f14 0%, #0f1420 100%);
+    background-attachment: fixed;
+    color: #e8e6e1;
 }
 
-/* Hide Streamlit chrome */
-#MainMenu, footer, header,
-[data-testid="stToolbar"],
-[data-testid="stDecoration"],
-[data-testid="stStatusWidget"] { display: none !important; }
-
-/* ── SIDEBAR ── */
-[data-testid="stSidebar"] {
-    background: #16161d !important;
-    border-right: 1px solid rgba(255,255,255,0.06) !important;
-}
-[data-testid="stSidebar"] > div:first-child {
-    padding: 0 !important;
+.stApp {
+    background: linear-gradient(160deg, #0d0f14 0%, #0f1420 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
 }
 
-/* ── MAIN CONTENT ── */
-[data-testid="stMain"] { background: #0f0f13 !important; }
-[data-testid="stMainBlockContainer"] {
-    max-width: 820px !important;
-    padding: 0 2rem 6rem !important;
-    margin: 0 auto !important;
+.block-container {
+    max-width: 780px;
+    padding: 0 1.5rem 6rem 1.5rem;
+    margin: 0 auto;
+    background: transparent;
 }
 
-/* ── ALL BUTTONS BASE ── */
-[data-testid="stButton"] > button {
-    font-family: 'Inter', sans-serif !important;
-    font-weight: 500 !important;
-    transition: all 0.15s ease !important;
-    cursor: pointer !important;
+header[data-testid="stHeader"] {
+    background: transparent;
+    border-bottom: none;
+}
+
+.app-header {
+    padding: 2.5rem 0 1.5rem 0;
+    border-bottom: 1px solid #1e2230;
+    margin-bottom: 2rem;
+}
+
+.app-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 1.15rem;
+    font-weight: 500;
+    color: #e8e6e1;
+    letter-spacing: 0.04em;
+    margin: 0;
+}
+
+.app-subtitle {
+    font-size: 0.82rem;
+    color: #5a5a6a;
+    margin-top: 0.3rem;
+    font-weight: 300;
+    letter-spacing: 0.01em;
+}
+
+[data-testid="stChatMessage"] {
+    background: transparent !important;
+    border: none !important;
+    padding: 0.25rem 0;
+}
+
+[data-testid="stChatMessageContent"] {
+    background: transparent !important;
+}
+
+[data-testid="stChatMessage"][data-testid*="user"] [data-testid="stChatMessageContent"],
+.user-bubble {
+    background: #161b28 !important;
+    border-radius: 16px 16px 4px 16px;
+    padding: 0.85rem 1.1rem;
+    border: 1px solid #1e2a3a;
+}
+
+[data-testid="stChatMessage"][data-testid*="assistant"] [data-testid="stChatMessageContent"],
+.assistant-bubble {
+    background: transparent !important;
+    padding: 0.5rem 0;
+}
+
+.stChatMessage:has([data-testid="stChatMessageAvatarUser"]) {
+    flex-direction: row-reverse;
+}
+
+[data-testid="stChatMessageAvatarUser"],
+[data-testid="stChatMessageAvatarAssistant"] {
+    width: 28px !important;
+    height: 28px !important;
+    background: #161b28 !important;
+    border: 1px solid #1e2a3a !important;
     border-radius: 8px !important;
+    font-size: 0.7rem !important;
+    color: #4a5a7a !important;
 }
 
-/* New Chat */
-.new-chat-btn [data-testid="stButton"] > button {
-    background: #ede0c4 !important;
-    color: #1a1208 !important;
-    border: none !important;
-    width: 100% !important;
-    font-size: 0.83rem !important;
-    padding: 0.55rem 1rem !important;
-    justify-content: flex-start !important;
-    gap: 0.4rem !important;
-}
-.new-chat-btn [data-testid="stButton"] > button:hover {
-    background: #e2d4b5 !important;
+[data-testid="stChatInput"] {
+    background: #12161f !important;
+    border: 1px solid #1e2a3a !important;
+    border-radius: 14px !important;
+    color: #e8e6e1 !important;
+    font-family: 'DM Sans', sans-serif !important;
+    font-size: 0.9rem !important;
+    box-shadow: 0 -1px 0 #0d0f14 !important;
 }
 
-/* History items */
-.hist-item [data-testid="stButton"] > button {
-    background: transparent !important;
-    color: rgba(255,255,255,0.42) !important;
-    border: none !important;
-    width: 100% !important;
-    font-size: 0.79rem !important;
-    font-weight: 400 !important;
-    padding: 0.42rem 0.6rem !important;
-    justify-content: flex-start !important;
-    text-align: left !important;
-    border-radius: 6px !important;
-}
-.hist-item [data-testid="stButton"] > button:hover {
-    background: rgba(255,255,255,0.05) !important;
-    color: rgba(255,255,255,0.7) !important;
+[data-testid="stChatInputSubmitButton"] {
+    color: #e8e6e1 !important;
 }
 
-/* Send button */
-.send-btn [data-testid="stButton"] > button {
-    background: #5c5cf5 !important;
-    color: white !important;
-    border: none !important;
-    width: 42px !important;
-    height: 42px !important;
-    min-height: 0 !important;
+.source-meta {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: #5a5a6a;
+    margin-bottom: 1rem;
+    letter-spacing: 0.02em;
+}
+
+.answer-text {
+    font-size: 0.92rem;
+    line-height: 1.75;
+    color: #d4d2cd;
+}
+
+.stExpander {
+    background: #10141e !important;
+    border: 1px solid #1e2230 !important;
     border-radius: 10px !important;
-    padding: 0 !important;
-    font-size: 1.1rem !important;
-    line-height: 1 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-}
-.send-btn [data-testid="stButton"] > button:hover {
-    background: #4a4ae0 !important;
-    transform: translateY(-1px) !important;
+    margin-bottom: 0.4rem !important;
 }
 
-/* Clear button */
-.clear-btn [data-testid="stButton"] > button {
-    background: transparent !important;
-    color: rgba(255,255,255,0.25) !important;
-    border: 1px solid rgba(255,255,255,0.07) !important;
-    font-size: 0.73rem !important;
-    font-weight: 400 !important;
-    padding: 0.3rem 0.75rem !important;
-}
-.clear-btn [data-testid="stButton"] > button:hover {
-    color: rgba(255,255,255,0.5) !important;
-    border-color: rgba(255,255,255,0.14) !important;
+.stExpander summary {
+    font-size: 0.78rem !important;
+    color: #5a5a6a !important;
+    font-family: 'DM Mono', monospace !important;
 }
 
-/* ── TEXT INPUT ── */
-[data-testid="stTextInput"] label { display: none !important; }
-[data-testid="stTextInput"] > div > div {
-    background: rgba(255,255,255,0.05) !important;
-    border: 1px solid rgba(255,255,255,0.09) !important;
-    border-radius: 12px !important;
-    transition: border-color 0.2s, box-shadow 0.2s !important;
-}
-[data-testid="stTextInput"] > div > div:focus-within {
-    border-color: rgba(92,92,245,0.5) !important;
-    box-shadow: 0 0 0 3px rgba(92,92,245,0.08) !important;
-}
-[data-testid="stTextInput"] input {
-    background: transparent !important;
-    color: rgba(255,255,255,0.88) !important;
-    font-family: 'Inter', sans-serif !important;
-    font-size: 0.88rem !important;
-    padding: 0.72rem 1rem !important;
-    caret-color: #5c5cf5 !important;
-}
-[data-testid="stTextInput"] input::placeholder {
-    color: rgba(255,255,255,0.2) !important;
+.stExpander p {
+    font-size: 0.84rem !important;
+    color: #7a7a8a !important;
+    line-height: 1.65 !important;
 }
 
-/* ── SPINNER ── */
-[data-testid="stSpinner"] p {
-    color: rgba(255,255,255,0.35) !important;
-    font-size: 0.8rem !important;
-    font-family: 'Inter', sans-serif !important;
+.stSpinner {
+    color: #5a5a6a !important;
 }
 
-/* ── ALERT ── */
-[data-testid="stAlert"] {
-    background: rgba(239,68,68,0.07) !important;
-    border: 1px solid rgba(239,68,68,0.18) !important;
+.empty-state {
+    text-align: center;
+    padding: 5rem 0 3rem 0;
+    color: #1e2a3a;
+}
+
+.empty-state-icon {
+    font-size: 2rem;
+    margin-bottom: 0.75rem;
+    display: block;
+}
+
+.empty-state-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    letter-spacing: 0.06em;
+}
+
+.stAlert {
+    background: #1a1016 !important;
+    border: 1px solid #3a1e24 !important;
     border-radius: 10px !important;
-    font-family: 'Inter', sans-serif !important;
-    font-size: 0.82rem !important;
+    color: #a06070 !important;
+    font-size: 0.85rem !important;
 }
 
-/* ── SCROLLBAR ── */
-::-webkit-scrollbar { width: 3px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.09); border-radius: 3px; }
-
-/* Remove extra padding from columns */
-[data-testid="column"] { padding: 0 0.25rem !important; }
+div[data-stale="false"] .stSpinner > div {
+    border-top-color: #4a4a5a !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
-# ── Session state ─────────────────────────────────────────────────
-if "messages"    not in st.session_state: st.session_state.messages    = []
-if "history"     not in st.session_state: st.session_state.history     = []
-if "query_count" not in st.session_state: st.session_state.query_count = 0
 
-# ── API ───────────────────────────────────────────────────────────
-def call_api(query):
-    r = requests.post(f"{API_URL}/research", json={"query": query}, timeout=90)
-    return r.json()
+def get_research_response(user_input: str) -> dict:
+    response = requests.post(
+        f"{API_URL}/research",
+        json={"query": user_input},
+        timeout=300,
+    )
+    return response.json()
 
-# ════════════════════════════════════════════════════════════════
-#  SIDEBAR
-# ════════════════════════════════════════════════════════════════
-with st.sidebar:
 
-    # Logo row
-    st.markdown("""
-    <div style="padding:1.3rem 1.1rem 0.9rem; display:flex;
-                align-items:center; gap:0.5rem;">
-        <span style="color:#5c5cf5; font-size:1rem;">◈</span>
-        <span style="font-family:'Inter',sans-serif; font-size:0.92rem;
-                     font-weight:600; color:rgba(255,255,255,0.88);
-                     letter-spacing:0.01em;">ResearchAgent</span>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # New chat
-    st.markdown('<div class="new-chat-btn">', unsafe_allow_html=True)
-    if st.button("＋  New chat", key="new_chat", use_container_width=True):
+def initialize_state():
+    if "messages" not in st.session_state:
         st.session_state.messages = []
-        st.rerun()
-    st.markdown('</div>', unsafe_allow_html=True)
+    if "is_processing" not in st.session_state:
+        st.session_state.is_processing = False
 
-    st.markdown('<div style="height:0.9rem;"></div>', unsafe_allow_html=True)
 
-    # Stats card
-    st.markdown(f"""
-    <div style="margin:0 0.9rem 1rem; background:rgba(255,255,255,0.03);
-                border:1px solid rgba(255,255,255,0.06); border-radius:10px;
-                padding:0.75rem 1rem;">
-        <div style="font-size:0.58rem; letter-spacing:0.12em; text-transform:uppercase;
-                    color:rgba(255,255,255,0.25); font-family:'Inter',sans-serif;
-                    margin-bottom:0.2rem;">Queries this session</div>
-        <div style="font-size:1.6rem; font-weight:600; color:rgba(255,255,255,0.82);
-                    font-family:'Inter',sans-serif; line-height:1.1;">
-            {st.session_state.query_count}
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-    # History
-    if st.session_state.history:
-        st.markdown("""
-        <div style="padding:0 1rem 0.5rem; font-size:0.65rem; letter-spacing:0.09em;
-                    text-transform:uppercase; color:rgba(255,255,255,0.22);
-                    font-family:'Inter',sans-serif;">Your conversations</div>
-        """, unsafe_allow_html=True)
-
-        for i, item in enumerate(reversed(st.session_state.history[-8:])):
-            label = (item["query"][:34] + "…") if len(item["query"]) > 34 else item["query"]
-            st.markdown('<div class="hist-item">', unsafe_allow_html=True)
-            st.button(f"◯  {label}", key=f"h{i}", use_container_width=True)
-            st.markdown('</div>', unsafe_allow_html=True)
-
-    # Bottom strip
+def render_header():
     st.markdown("""
-    <div style="position:absolute; bottom:0; left:0; right:0;
-                padding:0.9rem 1.1rem;
-                border-top:1px solid rgba(255,255,255,0.05);
-                display:flex; align-items:center; gap:0.6rem;
-                background:#16161d;">
-        <div style="width:26px; height:26px; border-radius:50%; flex-shrink:0;
-                    background:linear-gradient(135deg,#5c5cf5,#a78bfa);
-                    display:flex; align-items:center; justify-content:center;
-                    font-size:0.68rem; color:white; font-weight:600;
-                    font-family:'Inter',sans-serif;">R</div>
-        <div>
-            <div style="font-size:0.77rem; font-weight:500;
-                        color:rgba(255,255,255,0.75);
-                        font-family:'Inter',sans-serif;">Research Agent</div>
-            <div style="font-size:0.65rem; color:rgba(255,255,255,0.28);
-                        font-family:'Inter',sans-serif;">localhost:8000</div>
-        </div>
+    <div class="app-header">
+        <p class="app-title">◈ Research Agent</p>
+        <p class="app-subtitle">Searches the web and synthesizes answers in real time</p>
     </div>
     """, unsafe_allow_html=True)
 
-# ════════════════════════════════════════════════════════════════
-#  MAIN — CHAT AREA
-# ════════════════════════════════════════════════════════════════
 
-# Empty state
-if not st.session_state.messages:
+def render_message(message: dict):
+    with st.chat_message(message["role"]):
+        if message["role"] == "user":
+            st.markdown(message["content"])
+        else:
+            st.markdown(f'<div class="answer-text">{message["content"]}</div>', unsafe_allow_html=True)
+
+            if message.get("passages"):
+                sources = message["passages"]
+                st.markdown(
+                    f'<div class="source-meta">{len(sources)} sources · {message.get("time", "—")}s</div>',
+                    unsafe_allow_html=True,
+                )
+                for passage in sources:
+                    score = round(passage["score"] * 100)
+                    domain = passage["url"].split("/")[2] if "//" in passage["url"] else passage["url"]
+                    with st.expander(f"{score}% — {domain}"):
+                        st.write(passage["passage"])
+
+
+def render_empty_state():
     st.markdown("""
-    <div style="text-align:center; padding:5rem 1rem 2rem;">
-        <div style="font-size:1.9rem; opacity:0.12; margin-bottom:1rem;">◈</div>
-        <div style="font-size:1.45rem; font-weight:600;
-                    color:rgba(255,255,255,0.7); font-family:'Inter',sans-serif;
-                    margin-bottom:0.45rem;">
-            How can I help you research today?
-        </div>
-        <div style="font-size:0.84rem; color:rgba(255,255,255,0.28);
-                    font-family:'Inter',sans-serif;">
-            Ask any question — I search the web and generate a grounded answer with sources.
-        </div>
-    </div>
-    <div style="display:flex; flex-wrap:wrap; gap:0.5rem;
-                justify-content:center; padding-bottom:2rem;">
-        <div style="background:rgba(255,255,255,0.04);
-                    border:1px solid rgba(255,255,255,0.07);
-                    border-radius:8px; padding:0.45rem 0.85rem;
-                    font-size:0.78rem; color:rgba(255,255,255,0.35);
-                    font-family:'Inter',sans-serif; cursor:default;">
-            What causes urban heat islands?
-        </div>
-        <div style="background:rgba(255,255,255,0.04);
-                    border:1px solid rgba(255,255,255,0.07);
-                    border-radius:8px; padding:0.45rem 0.85rem;
-                    font-size:0.78rem; color:rgba(255,255,255,0.35);
-                    font-family:'Inter',sans-serif; cursor:default;">
-            How does CRISPR gene editing work?
-        </div>
-        <div style="background:rgba(255,255,255,0.04);
-                    border:1px solid rgba(255,255,255,0.07);
-                    border-radius:8px; padding:0.45rem 0.85rem;
-                    font-size:0.78rem; color:rgba(255,255,255,0.35);
-                    font-family:'Inter',sans-serif; cursor:default;">
-            Latest advances in quantum computing
-        </div>
+    <div class="empty-state">
+        <span class="empty-state-icon">◈</span>
+        <p class="empty-state-text">ASK ANYTHING</p>
     </div>
     """, unsafe_allow_html=True)
 
-# Messages
-for msg in st.session_state.messages:
-    if msg["role"] == "user":
-        st.markdown(f"""
-        <div style="display:flex; gap:0.75rem; margin-bottom:2rem;
-                    align-items:flex-start;">
-            <div style="width:28px; height:28px; border-radius:50%; flex-shrink:0;
-                        background:linear-gradient(135deg,#5c5cf5,#a78bfa);
-                        display:flex; align-items:center; justify-content:center;
-                        font-size:0.68rem; font-weight:600; color:white;
-                        font-family:'Inter',sans-serif; margin-top:1px;">U</div>
-            <div style="flex:1; padding-top:2px;">
-                <div style="font-family:'Inter',sans-serif; font-size:0.76rem;
-                            font-weight:600; color:rgba(255,255,255,0.88);
-                            margin-bottom:0.28rem;">
-                    You
-                    <span style="font-weight:400; font-size:0.7rem;
-                                 color:rgba(255,255,255,0.22);
-                                 margin-left:0.45rem;">{msg["ts"]}</span>
-                </div>
-                <div style="font-family:'Inter',sans-serif; font-size:0.88rem;
-                            color:rgba(255,255,255,0.82); line-height:1.65;">
-                    {msg["content"]}
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
 
+def handle_user_input(user_query: str):
+    st.session_state.messages.append({"role": "user", "content": user_query})
+    st.session_state.is_processing = True
+
+    with st.chat_message("user"):
+        st.markdown(user_query)
+
+    with st.chat_message("assistant"):
+        with st.spinner("Searching…"):
+            result = get_research_response(user_query)
+
+        if "error" in result:
+            st.error(result["error"])
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": f"Error: {result['error']}",
+                "passages": [],
+                "time": None,
+            })
+        else:
+            answer = result["answer"]
+            passages = result.get("passages", [])
+            elapsed = result.get("time")
+
+            st.markdown(f'<div class="answer-text">{answer}</div>', unsafe_allow_html=True)
+
+            if passages:
+                st.markdown(
+                    f'<div class="source-meta">{len(passages)} sources · {elapsed}s</div>',
+                    unsafe_allow_html=True,
+                )
+                for passage in passages:
+                    score = round(passage["score"] * 100)
+                    domain = passage["url"].split("/")[2] if "//" in passage["url"] else passage["url"]
+                    with st.expander(f"{score}% — {domain}"):
+                        st.write(passage["passage"])
+
+            st.session_state.messages.append({
+                "role": "assistant",
+                "content": answer,
+                "passages": passages,
+                "time": elapsed,
+            })
+
+    st.session_state.is_processing = False
+
+
+def main():
+    initialize_state()
+    render_header()
+
+    if not st.session_state.messages:
+        render_empty_state()
     else:
-        # Sources block
-        src_html = ""
-        if msg.get("passages"):
-            src_html = """
-            <div style="margin-top:1rem; padding-top:0.9rem;
-                        border-top:1px solid rgba(255,255,255,0.05);">
-                <div style="font-size:0.63rem; letter-spacing:0.1em;
-                            text-transform:uppercase; color:rgba(255,255,255,0.22);
-                            font-family:'Inter',sans-serif; margin-bottom:0.5rem;">
-                    Sources
-                </div>"""
-            for p in msg["passages"]:
-                score  = round(p["score"] * 100)
-                url    = p["url"]
-                domain = url.replace("https://","").replace("http://","").split("/")[0]
-                src_html += f"""
-                <div style="display:flex; align-items:center; gap:0.65rem;
-                            padding:0.42rem 0.7rem; margin-bottom:0.28rem;
-                            background:rgba(255,255,255,0.03);
-                            border:1px solid rgba(255,255,255,0.055);
-                            border-radius:7px;">
-                    <span style="font-size:0.68rem; font-weight:600;
-                                 color:rgba(92,92,245,0.85);
-                                 font-family:'Inter',sans-serif;
-                                 min-width:30px;">{score}%</span>
-                    <a href="{url}" target="_blank"
-                       style="font-size:0.74rem; color:rgba(255,255,255,0.38);
-                              font-family:'Inter',sans-serif; text-decoration:none;
-                              overflow:hidden; text-overflow:ellipsis;
-                              white-space:nowrap; flex:1;">
-                        {domain}
-                    </a>
-                </div>"""
-            src_html += "</div>"
+        for message in st.session_state.messages:
+            render_message(message)
 
-        elapsed_html = ""
-        if msg.get("elapsed"):
-            elapsed_html = f"""<span style="font-size:0.68rem; font-weight:400;
-                                color:rgba(255,255,255,0.18); margin-left:0.5rem;">
-                                ⚡ {msg['elapsed']}s</span>"""
+    user_query = st.chat_input(
+        "Ask a research question…",
+        disabled=st.session_state.is_processing,
+    )
 
-        st.markdown(f"""
-        <div style="display:flex; gap:0.75rem; margin-bottom:2rem;
-                    align-items:flex-start;">
-            <div style="width:28px; height:28px; border-radius:50%; flex-shrink:0;
-                        background:rgba(92,92,245,0.12);
-                        border:1px solid rgba(92,92,245,0.28);
-                        display:flex; align-items:center; justify-content:center;
-                        font-size:0.8rem; margin-top:1px;">◈</div>
-            <div style="flex:1; padding-top:2px;">
-                <div style="font-family:'Inter',sans-serif; font-size:0.76rem;
-                            font-weight:600; color:rgba(255,255,255,0.88);
-                            margin-bottom:0.28rem;">
-                    Research Agent
-                    <span style="font-weight:400; font-size:0.7rem;
-                                 color:rgba(255,255,255,0.22);
-                                 margin-left:0.45rem;">{msg["ts"]}</span>
-                    {elapsed_html}
-                </div>
-                <div style="font-family:'Inter',sans-serif; font-size:0.88rem;
-                            color:rgba(255,255,255,0.78); line-height:1.7;">
-                    {msg["content"]}
-                </div>
-                {src_html}
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
+    if user_query and user_query.strip():
+        handle_user_input(user_query.strip())
 
-# ── Input bar (sticky bottom) ─────────────────────────────────────
-st.markdown("""
-<div style="position:fixed; bottom:0; left:260px; right:0;
-            background:linear-gradient(to top, #0f0f13 75%, transparent);
-            padding:1.2rem 0 1rem; z-index:100;">
-<div style="max-width:820px; margin:0 auto; padding:0 2rem;">
-""", unsafe_allow_html=True)
 
-c1, c2 = st.columns([11, 1])
-with c1:
-    question = st.text_input("msg", placeholder="Send a message…",
-                             label_visibility="collapsed", key="msg_input")
-with c2:
-    st.markdown('<div class="send-btn">', unsafe_allow_html=True)
-    send = st.button("↑", key="send_btn")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-st.markdown("""
-<div style="text-align:center; margin-top:0.5rem; font-size:0.66rem;
-            color:rgba(255,255,255,0.15); font-family:'Inter',sans-serif;">
-    Research Agent may produce inaccurate information — always verify sources
-</div>
-</div></div>
-""", unsafe_allow_html=True)
-
-# Clear button
-if st.session_state.messages:
-    _, ccol = st.columns([5, 1])
-    with ccol:
-        st.markdown('<div class="clear-btn">', unsafe_allow_html=True)
-        if st.button("Clear chat", key="clear"):
-            st.session_state.messages = []
-            st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
-
-# ── Submit logic ──────────────────────────────────────────────────
-if send and question.strip():
-    ts = datetime.now().strftime("%I:%M %p")
-
-    st.session_state.messages.append({
-        "role": "user", "content": question.strip(), "ts": ts
-    })
-    st.session_state.query_count += 1
-
-    with st.spinner("Researching…"):
-        try:
-            data = call_api(question.strip())
-
-            if "error" in data:
-                st.session_state.messages.append({
-                    "role": "bot",
-                    "content": f"Error: {data['error']}",
-                    "ts": datetime.now().strftime("%I:%M %p"),
-                    "passages": [], "elapsed": None
-                })
-            else:
-                st.session_state.messages.append({
-                    "role":     "bot",
-                    "content":  data["answer"],
-                    "ts":       datetime.now().strftime("%I:%M %p"),
-                    "passages": data["passages"],
-                    "elapsed":  data["time"]
-                })
-                st.session_state.history.append({"query": question.strip()})
-
-        except requests.exceptions.ConnectionError:
-            st.error("Cannot reach backend — is FastAPI running on port 8000?")
-        except requests.exceptions.Timeout:
-            st.error("Request timed out — Ollama may be slow. Try again.")
-        except Exception as e:
-            st.error(f"Error: {str(e)}")
-
-    st.rerun()
-
-elif send and not question.strip():
-    st.warning("Please type a question first.")
+if __name__ == "__main__":
+    main()
